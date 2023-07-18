@@ -2,6 +2,8 @@ import { debug, error, info, log, warn } from "./logging";
 import { cachePronouns, getPronouns } from "./caching";
 import { normaliseAccountName } from "./protootshelpers";
 import { extractFromStatus } from "./pronouns";
+import { mastodon } from "./mastodon.js";
+import { calckey } from "./calckey.js";
 
 const cacheMaxAge = 24 * 60 * 60 * 1000; // time after which cached pronouns should be checked again: 24h
 let conversationsCache;
@@ -16,7 +18,7 @@ let conversationsCache;
  * @returns {string} The pronouns if we have any, otherwise "null".
  */
 export async function fetchPronouns(dataID, accountName, type) {
-	// log(`searching for ${account_name}`);
+	//log(`searching for ${accountName}`);
 	const cacheResult = await getPronouns();
 	debug(cacheResult);
 	// Extract the current cache by using object destructuring.
@@ -84,12 +86,24 @@ export async function fetchPronouns(dataID, accountName, type) {
 async function fetchStatus(statusID) {
 	const accessToken = await getActiveAccessToken();
 	//fetch status from home server with access token
-	const response = await fetch(
-		`${location.protocol}//${location.host}/api/v1/statuses/${statusID}`,
-		{
-			headers: { Authorization: `Bearer ${accessToken}` },
-		},
-	);
+	let response;
+	if (document.querySelector("#mastodon")) {
+		response = await fetch(
+			`${location.protocol}//${location.host}/api/v1/statuses/${statusID}`,
+			{
+				headers: { Authorization: `Bearer ${accessToken}` },
+			},
+		);
+	} else if (document.querySelector("#calckey_app")) {
+		response = await fetch(
+			`${location.protocol}//${location.host}/api/notes/show`,
+			{
+				method: "POST",
+				body: `"noteId: "${statusID}"`,
+			},
+		);
+		log(response)
+	}
 
 	if (!response.ok) return null;
 
@@ -179,7 +193,7 @@ async function getActiveAccessToken() {
 	// Besides a lot of other information, it contains the access token for the current user.
 	const initialStateEl = document.getElementById("initial-state");
 	if (!initialStateEl) {
-		error("user not logged in yet");
+
 		return "";
 	}
 

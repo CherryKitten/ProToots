@@ -2,6 +2,8 @@
 // obligatory crime. because be gay, do crime.
 // 8======D
 
+import { calckey } from "../libs/calckey.js";
+
 const contributorList = [
 	"vivien@queer.group",
 	"jasmin@queer.group",
@@ -19,7 +21,7 @@ import {
 	notificationVisibility,
 	statusVisibility,
 } from "../libs/settings";
-import { warn } from "../libs/logging";
+import { log, warn } from "../libs/logging";
 import { insertAfter, waitForElement, waitForElementRemoved } from "../libs/domhelpers";
 import { accountNameFromURL, addTypeAttribute, normaliseAccountName } from "../libs/protootshelpers";
 
@@ -34,7 +36,7 @@ checkSite();
 async function checkSite() {
 	getSettings();
 
-	document.addEventListener("readystatechange", main, { once: true });
+	document.addEventListener("readystatechange", () => setTimeout(main, 500), { once: true });
 }
 
 /**
@@ -45,10 +47,12 @@ async function checkSite() {
  */
 function main() {
 	// debug('selection for id mastodon', {'result': document.querySelector("#mastodon")})
+
 	if (document.querySelector("#mastodon")) {
 		mastodon();
+	} else if (document.querySelector("#calckey_app")) {
+		calckey();
 	} else {
-
 		warn("Not a Supported site");
 	}
 }
@@ -78,6 +82,8 @@ export function onTootIntersection(observerentries) {
 				waitForElement(ArticleElement, ".status__display-name", () => {
 					addProplate(ArticleElement);
 				});
+			} else if (ArticleElement.hasAttribute("data-v-fad8d144")) {
+				waitForElement(ArticleElement, ".mkusername", () => addProplate(ArticleElement));
 			} else {
 				waitForElement(ArticleElement, ".display-name", () => addProplate(ArticleElement));
 			}
@@ -142,6 +148,9 @@ async function addProplate(element) {
 		case "conversation":
 			if (conversationVisibility()) addToConversation(element);
 			break;
+		case "calckey-status":
+			addToStatus(element)
+			break;
 	}
 
 	/**
@@ -177,7 +186,7 @@ async function addProplate(element) {
 	 * @returns {string}
 	 */
 	function getID(element) {
-		let id = element.dataset.id;
+		let id = element.dataset.id || element.offsetParent.id;
 		if (!id) {
 			// We don't have a status ID, pronouns might not be in cache
 			warn(
@@ -254,10 +263,10 @@ async function addProplate(element) {
 			}
 		}
 
-		const accountNameEl = getAccountNameEl(element, ".display-name__account");
+		const accountNameEl = getAccountNameEl(element, ".display-name__account") || getAccountNameEl(element,  ".mk-acct");
 		const accountName = getAccountName(accountNameEl);
 
-		const nametagEl = getNametagEl(element, ".display-name__html");
+		const nametagEl = getNametagEl(element, ".display-name__html") || getNametagEl(element,  ".mkusername");
 		nametagEl.parentElement.classList.add("has-proplate");
 		element.setAttribute("protoots-checked", "true");
 		// Add the checked attribute only _after_ we've passed the basic checks.
@@ -287,7 +296,7 @@ async function addProplate(element) {
 		//debug("adding to account");
 		const statusId = getID(element);
 		const nametagEl = element.querySelector(".display-name__html");
-		const accountName = getAccountName(element.querySelector(".display-name__account"));
+		const accountName = getAccountName(element.querySelector(".display-name__account")) || getAccountName(element.querySelector(".mkusername"));
 
 		nametagEl.parentElement.classList.add("has-proplate");
 

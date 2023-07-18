@@ -53,5 +53,8 @@ export function addTypeAttribute(ActionElement) {
 	} else if (hasClasses(ActionElement, "account")) {
 		ActionElement.setAttribute("protoots-type", "account");
 		ActionElement.closest("article").setAttribute("protoots-type", "account");
+	} else if (hasClasses(ActionElement, "main")) {
+		ActionElement.setAttribute("protoots-type", "calckey-status");
+		ActionElement.closest("article").setAttribute("protoots-type", "calckey-status");
 	}
 }
